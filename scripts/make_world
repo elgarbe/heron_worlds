@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+# Software License Agreement (BSD)
+#
+# @author    Guy Stoppi <gstoppi@clearpathrobotics.com>
+# @copyright (c) 2018, Clearpath Robotics, Inc., All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification, are permitted provided that
+# the following conditions are met:
+# * Redistributions of source code must retain the above copyright notice, this list of conditions and the
+#   following disclaimer.
+# * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+#   following disclaimer in the documentation and/or other materials provided with the distribution.
+# * Neither the name of Clearpath Robotics nor the names of its contributors may be used to endorse or
+#   promote products derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+# TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+import roslib
+import os
+import rospy
+import argparse
+import sys
+import shutil
+from rospkg import RosPack
+
+def replaceAllParams(str, args):
+    return str.replace("${WORLD_ID}", args.world_name)\
+              .replace("${AUTHOR}", args.author)\
+              .replace("${AUTHOR_EMAIL}", args.author_email)\
+              .replace("${DESCRIPTION}", args.desc)\
+              .replace("${WORLD_SIZE}", args.world_size)
+
+def writeFileFromTemplate(tmplt, file, args):
+    template = open(tmplt, "r")
+    outfile = open(file, "w+")
+
+    for line in template:
+        proc = replaceAllParams(line, args)
+        outfile.write(proc)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Create new world file")
+    parser.add_argument('-n', '--world_name', type=str)
+    parser.add_argument('-a', '--author', default="John Doe", type=str)
+    parser.add_argument('-e', '--author_email', default="john.doe@email.com", type=str)
+    parser.add_argument('-d', '--desc', default="Heron World Model", type=str)
+    parser.add_argument('-s', '--world_size', default="60", type=str)
+    parser.add_argument('-m', '--model_file', type=str)
+
+    args = parser.parse_args(rospy.myargv()[1:])
+
+    if args.world_name is None:
+        print('No world name given!')
+        sys.exit(-1)
+
+    if args.model_file is None:
+        print('No 3D seabed file was given!')
+        sys.exit(-1)
+
+    pkg_path = RosPack().get_path("heron_worlds")
+    model_folder = pkg_path + "/models/" + args.world_name
+
+    folders = [model_folder, model_folder + "/meshes", pkg_path + "/worlds", pkg_path + "/launch"]
+
+    for fold in folders:
+        if not os.path.exists(fold):
+            os.makedirs(fold)
+
+    shutil.copyfile(args.model_file, model_folder + "/meshes/" + args.world_name + ".stl")
+
+    writeFileFromTemplate(pkg_path + "/templates/model.config.template", model_folder + "/model.config",  args)
+    writeFileFromTemplate(pkg_path + "/templates/model.sdf.template", model_folder + "/model.sdf", args)
+    writeFileFromTemplate(pkg_path + "/templates/underwater.world.template", pkg_path + "/worlds/" + args.world_name + ".world", args)
+    writeFileFromTemplate(pkg_path + "/templates/world.launch.template", pkg_path + "/launch/" + args.world_name + ".launch", args)
