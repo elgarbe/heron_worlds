@@ -1,6 +1,6 @@
 # Heron Worlds
 
-The *heron_worlds* package was created to simplify world creation for the Heron simulator. All that is required is a world name and a 3D file of the world's seabed, islands, coast, etc. Currently, only the STL format has been tested.
+The *heron_worlds* package was created to simplify world creation for the Heron simulator. All that is required is a world name and a 3D file of the world's seabed, islands, coast, etc.
 
 When making the 3D file, ensure that the sealevel is at Z = 0. Anything below this point is considered underwater, anything above this point is out of the water, etc.
 
